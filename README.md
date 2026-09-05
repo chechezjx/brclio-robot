@@ -2,6 +2,8 @@
 
 真正可编程的儿童机器人工作台。使用图形积木安排路线，在 SVG 地图中逐格执行、收集星星、观察结果并修改程序。默认简体中文，无需实体硬件或后端。
 
+[在线体验](https://chechezjx.github.io/brclio-robot/) · [GitHub 仓库](https://github.com/chechezjx/brclio-robot) · [构建状态](https://github.com/chechezjx/brclio-robot/actions) · [部署指南](docs/DEPLOYMENT.md)
+
 ## 开始运行
 
 需要 **Node.js 24.x**，推荐 `.nvmrc` 指定的 **24.19.0**。项目使用 **pnpm 11.19.0**，直接依赖固定精确版本，提交了 `pnpm-lock.yaml`。
@@ -131,6 +133,12 @@ public/robot.svg         本地原创图标
 ## 静态部署
 
 已提供 **Vercel 即导入即部署配置**、**GitHub CI** 和 **GitHub Pages 自动发布工作流**。Vercel 直接导入 GitHub 仓库；Pages 首次在 Settings → Pages 选择 GitHub Actions。详细步骤、权限、路径适配与排错见 [部署指南](docs/DEPLOYMENT.md)。
+
+本仓库 `chechezjx/brclio-robot` 已启用 Pages。连接 Vercel 时，在 [新建项目](https://vercel.com/new) 中导入本仓库，即可继续使用同一仓库自动部署。
+
+若要复制一份项目到自己的 GitHub 账号，可使用下面的按钮；它会创建新仓库并部署到 Vercel：
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fchechezjx%2Fbrclio-robot)
 
 执行 `pnpm build` 后，把 **`dist/` 内的全部文件**部署到任意静态服务器，如 Nginx、GitHub Pages、Netlify、Cloudflare Pages。无需后端、环境密钥、运行时 API 或数据库。Vite `base: './'` 支持子目录部署，没有前端路由重写要求。请通过 HTTP(S) 访问，不要直接双击 `index.html` 使用 `file://`。
 

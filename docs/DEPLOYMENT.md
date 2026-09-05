@@ -2,10 +2,12 @@
 
 这是无后端的 Vite 静态应用。不需要 API Key、数据库或运行时环境变量。
 
+公开源码：[chechezjx/brclio-robot](https://github.com/chechezjx/brclio-robot)。GitHub Pages 已启用，地址为 [在线编程工作台](https://chechezjx.github.io/brclio-robot/)，部署状态可在 [Actions](https://github.com/chechezjx/brclio-robot/actions) 查看。
+
 ## 推荐：GitHub 仓库连接 Vercel
 
 1. 在 Vercel 选择 **Add New → Project → Import Git Repository**。
-2. 选择存放本项目的 GitHub 仓库，默认分支为 `main`，Root Directory 保持仓库根目录。
+2. 选择 `chechezjx/brclio-robot`（或自己的 fork），默认分支为 `main`，Root Directory 保持仓库根目录。
 3. 保持 Framework Preset 为 **Vite**；部署设置由仓库中的 `vercel.json` 提供，直接点 Deploy。
 4. 后续推送到 `main` 自动更新生产站；其他分支和 PR 由 Vercel Git 集成生成预览。
 
@@ -73,8 +75,9 @@ Pages 工作流会把 `actions/configure-pages` 返回的 `base_path` 加 `/` �
 ```powershell
 $env:VITE_BASE_PATH = '/brclio-robot/'
 pnpm build
-Remove-Item Env:VITE_BASE_PATH
 pnpm preview
+# 结束预览服务器后，再清除临时变量
+Remove-Item Env:VITE_BASE_PATH
 ```
 
 手动构建完成后应从预览服务器的同名子路径访问。一般部署无需手动设置此变量。
