@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+          cache: true
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Unit tests and production build
+        run: pnpm build:deploy
+      - name: Install browser
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Browser acceptance tests
+        run: pnpm test:e2e
+      - name: Verify root and repository subpath deployments
+        run: pnpm test:deploy
+      - name: Keep browser failure reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-failure-reports
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

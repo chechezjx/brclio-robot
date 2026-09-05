@@ -5,11 +5,13 @@
   "type": "module",
   "packageManager": "pnpm@11.19.0",
   "engines": {
-    "node": ">=22.12.0"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
+    "build:deploy": "pnpm test && pnpm build",
+    "test:deploy": "node scripts/build-pages.mjs && playwright test --config playwright.deploy.config.ts",
     "typecheck": "tsc -b",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
@@ -24,7 +26,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
-    "@types/node": "^24.13.3",
+    "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "@vitejs/plugin-react": "6.1.1",

@@ -4,7 +4,7 @@
 
 ## 开始运行
 
-需要 **Node.js 22.12 或更新版本**，推荐 `.nvmrc` 指定的 **24.19.0**。项目使用 **pnpm 11.19.0**，直接依赖固定精确版本，提交了 `pnpm-lock.yaml`。
+需要 **Node.js 24.x**，推荐 `.nvmrc` 指定的 **24.19.0**。项目使用 **pnpm 11.19.0**，直接依赖固定精确版本，提交了 `pnpm-lock.yaml`。
 
 ```sh
 npm install --global pnpm@11.19.0
@@ -22,6 +22,8 @@ pnpm build              # 类型检查 + 生产构建，产物在 dist/
 pnpm preview            # 本地检查生产产物
 pnpm exec playwright install chromium
 pnpm test:e2e           # 浏览器验收；自动启动/复用 5173 开发服务器
+pnpm build:deploy      # 单元测试 + 类型检查 + 生产构建
+pnpm test:deploy        # 检查生产包在根目录与 GitHub Pages 子目录的完整闭环
 ```
 
 也可以使用已安装的 Microsoft Edge 运行浏览器测试，免于下载 Playwright Chromium。在 PowerShell 中执行：
@@ -127,6 +129,8 @@ public/robot.svg         本地原创图标
 5. 更新适用关卡的 `allowed`，加入正常执行、边界、单步和导入验证测试。动画继续只读取解释器状态。
 
 ## 静态部署
+
+已提供 **Vercel 即导入即部署配置**、**GitHub CI** 和 **GitHub Pages 自动发布工作流**。Vercel 直接导入 GitHub 仓库；Pages 首次在 Settings → Pages 选择 GitHub Actions。详细步骤、权限、路径适配与排错见 [部署指南](docs/DEPLOYMENT.md)。
 
 执行 `pnpm build` 后，把 **`dist/` 内的全部文件**部署到任意静态服务器，如 Nginx、GitHub Pages、Netlify、Cloudflare Pages。无需后端、环境密钥、运行时 API 或数据库。Vite `base: './'` 支持子目录部署，没有前端路由重写要求。请通过 HTTP(S) 访问，不要直接双击 `index.html` 使用 `file://`。
 

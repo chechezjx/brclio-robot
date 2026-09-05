@@ -7,3 +7,5 @@ playwright-report/
 .env*
 .site-staging/
 .site-packaging.sh
+.vercel/
+dist-pages/

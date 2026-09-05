@@ -11,7 +11,18 @@
 | `pnpm build`                              | 通过，生成可静态托管的 `dist/`  |
 | `PLAYWRIGHT_CHANNEL=msedge pnpm test:e2e` | 12 个浏览器验收测试全部通过     |
 
-浏览器测试使用项目锁定的 Playwright 1.63.0 和本机 Microsoft Edge（Chromium），3 个并行测试上下文。Windows PowerShell 环境变量写法见 README。
+部署适配后另外实际执行：
+
+| 命令                                         | 结果                              |
+| -------------------------------------------- | --------------------------------- |
+| `pnpm install --frozen-lockfile`             | 通过，依赖与锁文件一致            |
+| `pnpm build:deploy`                          | 70 个单元测试、类型检查和构建通过 |
+| `PLAYWRIGHT_CHANNEL=msedge pnpm test:e2e`    | 原有 12 个浏览器验收回归通过      |
+| `PLAYWRIGHT_CHANNEL=msedge pnpm test:deploy` | 3 个生产包部署路径测试通过        |
+
+浏览器测试使用项目锁定的 Playwright 1.63.0 和本机 Microsoft Edge（Chromium），功能验收 3 个并行测试上下文，部署验收 2 个。Windows PowerShell 环境变量写法见 README。
+
+部署新增检查使用真实 `dist` 与额外构建的 `dist-pages`，覆盖域名根目录、相对素材的仓库子目录和显式 Pages base，验证 JS/CSS/SVG 路径、HTTP 状态、通关和刷新恢复。测试服务器只绑定回环地址，不作为生产后端。
 
 ## 用户验收映射
 

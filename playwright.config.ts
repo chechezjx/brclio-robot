@@ -2,7 +2,8 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
-  workers: 3,
+  forbidOnly: Boolean(process.env.CI),
+  workers: process.env.CI ? 2 : 3,
   timeout: 30_000,
   expect: { timeout: 5000 },
   reporter: [['list'], ['html', { open: 'never' }]],
@@ -15,9 +16,9 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'pnpm dev --port 5173',
+    command: 'pnpm dev --port 5173 --strictPort',
     url: 'http://localhost:5173',
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },
 });

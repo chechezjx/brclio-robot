@@ -1,0 +1,10 @@
+.git
+.openai
+.site-staging
+.site-packaging.sh
+node_modules
+dist
+dist-pages
+test-results
+playwright-report
+.env*

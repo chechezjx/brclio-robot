@@ -25,7 +25,7 @@ importers:
         specifier: 1.63.0
         version: 1.63.0
       '@types/node':
-        specifier: ^24.13.3
+        specifier: 24.13.3
         version: 24.13.3
       '@types/react':
         specifier: 19.2.18
