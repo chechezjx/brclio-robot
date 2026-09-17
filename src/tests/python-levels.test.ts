@@ -5,30 +5,33 @@ import { exportProgram, freshData, importProgram, readLocal, writeLocal } from '
 import type { Point } from '../types';
 
 const pointKey = ({ x, y }: Point) => `${x},${y}`;
+const pythonLevels = levels.filter((level) => level.syntax === 'python');
 
 describe('新增 Python 关卡的数据与存档兼容', () => {
-  it.each([14, 15, 16, 17, 18])('第%d关地图坐标有效，障碍不会覆盖机器人、终点或星星', (number) => {
-    const level = levels.find((entry) => entry.number === number)!;
-    expect(level).toBeDefined();
-    expect(level.syntax).toBe('python');
-    expect(level.goal).toBeDefined();
-    const points = [level.start, level.goal!, ...level.stars, ...level.obstacles];
-    for (const point of points) {
-      expect(Number.isInteger(point.x) && Number.isInteger(point.y)).toBe(true);
-      expect(point.x).toBeGreaterThanOrEqual(0);
-      expect(point.x).toBeLessThan(level.width);
-      expect(point.y).toBeGreaterThanOrEqual(0);
-      expect(point.y).toBeLessThan(level.height);
-    }
-    const obstacles = new Set(level.obstacles.map(pointKey));
-    expect(obstacles.size).toBe(level.obstacles.length);
-    expect(new Set(level.stars.map(pointKey)).size).toBe(level.stars.length);
-    for (const point of [level.start, level.goal!, ...level.stars]) {
-      expect(obstacles.has(pointKey(point))).toBe(false);
-    }
-  });
+  it.each(pythonLevels.slice(1))(
+    '第$number关地图坐标有效，障碍不会覆盖机器人、终点或星星',
+    (level) => {
+      expect(level).toBeDefined();
+      expect(level.syntax).toBe('python');
+      expect(level.goal).toBeDefined();
+      const points = [level.start, level.goal!, ...level.stars, ...level.obstacles];
+      for (const point of points) {
+        expect(Number.isInteger(point.x) && Number.isInteger(point.y)).toBe(true);
+        expect(point.x).toBeGreaterThanOrEqual(0);
+        expect(point.x).toBeLessThan(level.width);
+        expect(point.y).toBeGreaterThanOrEqual(0);
+        expect(point.y).toBeLessThan(level.height);
+      }
+      const obstacles = new Set(level.obstacles.map(pointKey));
+      expect(obstacles.size).toBe(level.obstacles.length);
+      expect(new Set(level.stars.map(pointKey)).size).toBe(level.stars.length);
+      for (const point of [level.start, level.goal!, ...level.stars]) {
+        expect(obstacles.has(pointKey(point))).toBe(false);
+      }
+    },
+  );
 
-  it('旧关卡与六个 Python 关卡的草稿、通关记录和函数备份可同时恢复', () => {
+  it('旧关卡与全部 Python 关卡的草稿、通关记录和函数备份可同时恢复', () => {
     const values = new Map<string, string>();
     const storage = {
       getItem: (key: string) => values.get(key) ?? null,
@@ -37,9 +40,9 @@ describe('新增 Python 关卡的数据与存档兼容', () => {
       },
     };
     const data = freshData();
-    data.currentLevel = 'level-18';
+    data.currentLevel = pythonLevels.at(-1)!.id;
     data.settings.speed = 2;
-    const savedLevels = levels.filter((level) => level.number === 12 || level.number >= 13);
+    const savedLevels = [levels.find((level) => level.number === 12)!, ...pythonLevels];
     for (const level of savedLevels) {
       data.drafts[level.id] = importProgram(exportProgram(level.solution), level.id);
       data.completed[level.id] = {
@@ -48,7 +51,7 @@ describe('新增 Python 关卡的数据与存档兼容', () => {
         completedAt: '2026-09-17T10:00:00.000Z',
       };
     }
-    expect(Object.keys(data.drafts)).toHaveLength(7);
+    expect(Object.keys(data.drafts)).toHaveLength(savedLevels.length);
     expect(writeLocal(storage, data)).toBeUndefined();
     const restored = readLocal(storage);
     expect(restored.warning).toBeUndefined();

@@ -2,11 +2,13 @@ import { test, expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import { levels } from '../src/data/levels';
 import { freshData, STORAGE_KEY } from '../src/storage/local';
-import { runToEnd } from '../src/engine/interpreter';
+import { Interpreter, runToEnd } from '../src/engine/interpreter';
 import { programToPython } from '../src/features/editor/python';
 import type { Level, Program } from '../src/types';
 
-const pythonLevel = levels.find((level) => level.id === 'level-13')!;
+const pythonLevels = levels.filter((level) => level.syntax === 'python');
+const pythonLevel = pythonLevels[0];
+const capstone = pythonLevels.at(-1)!;
 const solutionCode = 'for _ in range(3):\n    robot.forward(3)\n    robot.turn_left()';
 const levelNumber = (number: number) => levels.find((level) => level.number === number)!;
 const levelButton = (page: Page, level: Level) =>
@@ -193,9 +195,10 @@ test('第12关通关继续 Python 关卡，JSON 备份往返保留循环与参�
   expect(await page.getByTestId('python-preview').textContent()).toBe(solutionCode);
 });
 
-for (const number of [14, 15, 16, 17, 18]) {
-  test(`第${number}关通过真实播放器收集全部星星并到达终点`, async ({ page }) => {
-    const level = levelNumber(number);
+for (const level of pythonLevels.slice(1)) {
+  test(`第${level.number}关通过真实播放器收集全部星星并到达终点`, async ({ page }) => {
+    // Advancing the clock still renders every action, including long routes under parallel load.
+    test.setTimeout(45_000);
     const expected = runToEnd(level, level.solution);
     await page.clock.install();
     await seedProgram(page, level.solution);
@@ -203,7 +206,7 @@ for (const number of [14, 15, 16, 17, 18]) {
     expect(await page.getByTestId('python-preview').textContent()).toBe(
       programToPython(level.solution),
     );
-    if (number === 18) {
+    if (level.id === capstone.id) {
       await page.screenshot({ path: 'test-results/python-capstone-desktop.png', fullPage: true });
       await page.locator('.function-definitions').screenshot({
         path: 'test-results/python-capstone-functions-desktop.png',
@@ -213,14 +216,26 @@ for (const number of [14, 15, 16, 17, 18]) {
       });
     }
     await page.getByRole('button', { name: '2倍速度', exact: true }).click();
-    if (number >= 17) {
+    const firstStep = new Interpreter(level, level.solution).step();
+    if (firstStep.focus?.calls.length) {
       await page.getByRole('button', { name: '单步', exact: true }).click();
-      await expect(page.locator('.function-panel.function-executing')).toHaveCount(1);
-      await expect(page.locator('.function-panel.function-executing h3')).toContainText(
-        'def action_a():',
+      await expect(page.locator('.function-panel.function-executing')).toHaveCount(
+        firstStep.focus.calls.length,
       );
-      await expect(page.locator('.program-block.block-call.context-active')).toHaveCount(1);
+      for (const call of firstStep.focus.calls) {
+        await expect(
+          page.locator('.function-panel.function-executing').getByRole('heading', {
+            name: new RegExp(`def action_${call.function.toLowerCase()}\\(\\):`),
+          }),
+        ).toBeVisible();
+      }
+      await expect(page.locator('.program-block.block-call.context-active')).toHaveCount(
+        firstStep.focus.calls.length,
+      );
       await expect(page.locator('.program-block.executing')).toHaveCount(1);
+      await expect(page.locator(`[data-block-id="${firstStep.focus.blockId}"]`)).toHaveClass(
+        /executing/,
+      );
       await expect(
         page.getByRole('button', { name: '添加action_a()', exact: true }),
       ).toBeDisabled();
@@ -237,14 +252,13 @@ for (const number of [14, 15, 16, 17, 18]) {
     await expect(page.getByTestId('robot-map')).toHaveAttribute('data-x', String(level.goal!.x));
     await expect(page.getByTestId('robot-map')).toHaveAttribute('data-y', String(level.goal!.y));
     await expect(levelButton(page, level)).toHaveClass(/done/);
-    if (number === 18) {
+    const nextLevel = levels[levels.indexOf(level) + 1];
+    if (!nextLevel) {
       await page.getByRole('button', { name: '进入自由实验室', exact: true }).click();
       await expect(page.getByRole('heading', { level: 1 })).toContainText('自由实验室');
     } else {
       await page.getByRole('button', { name: '去下一关探险', exact: true }).click();
-      await expect(page.getByRole('heading', { level: 1 })).toContainText(
-        levelNumber(number + 1).title,
-      );
+      await expect(page.getByRole('heading', { level: 1 })).toContainText(nextLevel.title);
     }
   });
 }
@@ -282,10 +296,47 @@ test('Python 函数可分别编辑、调用和撤销，预览保留定义与缩�
   expect(await page.getByTestId('python-preview').textContent()).toBe(preview);
 });
 
-test('六个 Python 关卡保留独立草稿，最终关函数与双层循环备份可往返', async ({ page }) => {
+test('间接函数调用返回时逐层清除高亮，继续回到主程序', async ({ page }) => {
+  const level = levelNumber(19);
+  const machine = new Interpreter(level, level.solution);
+  const snapshots = Array.from({ length: 100 }, () => machine.step());
+  const insideA = snapshots[0];
+  const insideB = snapshots.find(
+    (state) => state.focus?.calls.length === 1 && state.focus.calls[0].function === 'B',
+  )!;
+  const inMain = snapshots.find((state) => state.focus?.calls.length === 0)!;
+  expect(insideA.focus?.calls.map((call) => call.function)).toEqual(['B', 'A']);
+  expect(insideB).toBeDefined();
+  expect(inMain).toBeDefined();
+  expect(inMain.actions).toBeLessThan(30);
+  await seedProgram(page, level.solution);
+  let actions = 0;
+  for (const checkpoint of [insideA, insideB, inMain]) {
+    while (actions < checkpoint.actions) {
+      await page.getByRole('button', { name: '单步', exact: true }).click();
+      actions++;
+    }
+    await expect(page.getByTestId('action-count')).toHaveText(String(actions));
+    await expect(page.locator('.function-panel.function-executing')).toHaveCount(
+      checkpoint.focus!.calls.length,
+    );
+    await expect(page.locator('.program-block.block-call.context-active')).toHaveCount(
+      checkpoint.focus!.calls.length,
+    );
+    await expect(page.locator(`[data-block-id="${checkpoint.focus!.blockId}"]`)).toHaveClass(
+      /executing/,
+    );
+    if (checkpoint === insideB) {
+      await expect(page.locator('.function-panel.function-executing h3')).toContainText(
+        'def action_b():',
+      );
+    }
+  }
+});
+
+test('全部 Python 关卡保留独立草稿，最终关函数与循环备份可往返', async ({ page }) => {
   await seedProgram(page, pythonLevel.solution);
-  for (const number of [14, 15, 16, 17, 18]) {
-    const level = levelNumber(number);
+  for (const level of pythonLevels.slice(1)) {
     await levelButton(page, level).click();
     await page.getByLabel('导入程序文件').setInputFiles({
       name: `${level.id}.json`,
@@ -299,14 +350,13 @@ test('六个 Python 关卡保留独立草稿，最终关函数与双层循环备
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: '导出程序', exact: true }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/^Brclio-level-18-.*\.json$/);
+  expect(download.suggestedFilename()).toMatch(new RegExp(`^Brclio-${capstone.id}-.*\\.json$`));
   await page.getByRole('button', { name: '清空程序', exact: true }).click();
   await page.getByRole('button', { name: '确认清空', exact: true }).click();
   await expect(page.getByTestId('program-block')).toHaveCount(0);
   await page.getByLabel('导入程序文件').setInputFiles((await download.path())!);
   await page.reload();
-  for (const number of [13, 14, 15, 16, 17, 18]) {
-    const level = levelNumber(number);
+  for (const level of pythonLevels) {
     await levelButton(page, level).click();
     expect(await readDraft(page, level.id)).toEqual(level.solution);
     expect(await page.getByTestId('python-preview').textContent()).toBe(
@@ -315,8 +365,16 @@ test('六个 Python 关卡保留独立草稿，最终关函数与双层循环备
   }
 });
 
-test('十八关导航在笔记本与窄屏无溢出，刷新后选中关卡保持可见', async ({ page }) => {
-  const capstone = levelNumber(18);
+test('全部关卡导航在笔记本与窄屏无溢出，刷新后选中最后一关保持可见', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '选择关卡', exact: true }).click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', {
+      name: new RegExp(`${capstone.number} ${capstone.title}`),
+    })
+    .click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(capstone.title);
   await seedProgram(page, capstone.solution);
   for (const width of [1440, 1024, 640, 601]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -357,8 +415,7 @@ test.describe('Python 手机布局', () => {
     ).toBe(true);
   });
 
-  test('综合关双层循环和两组函数在手机可查看、编辑且没有横向溢出', async ({ page }) => {
-    const capstone = levelNumber(18);
+  test('最终综合关的循环与两组函数在手机可查看、编辑且没有横向溢出', async ({ page }) => {
     await seedProgram(page, capstone.solution);
     await page.getByRole('tab', { name: /我的编程板/ }).tap();
     await expect(page.getByRole('heading', { name: /def action_a\(\):/ })).toBeVisible();
@@ -383,5 +440,41 @@ test.describe('Python 手机布局', () => {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
+  });
+
+  test('手机双层循环可修改内层参数并撤销，嵌套积木不会超出屏幕', async ({ page }) => {
+    const nestedLevel = [...pythonLevels]
+      .reverse()
+      .find((level) =>
+        [level.solution.main, ...Object.values(level.solution.functions)].some((blocks) =>
+          blocks.some(
+            (block) =>
+              block.type === 'repeat' && block.body.some((child) => child.type === 'repeat'),
+          ),
+        ),
+      )!;
+    await seedProgram(page, nestedLevel.solution);
+    await page.getByRole('tab', { name: /我的编程板/ }).tap();
+    const innerLoop = page
+      .locator('.program-block.block-repeat .program-block.block-repeat')
+      .first();
+    const parameter = innerLoop.getByRole('combobox').first();
+    const original = await parameter.inputValue();
+    const edited = original === '2' ? '3' : '2';
+    await parameter.selectOption(edited);
+    await expect(parameter).toHaveValue(edited);
+    expect(await readDraft(page, nestedLevel.id)).not.toEqual(nestedLevel.solution);
+    await page.getByRole('button', { name: '撤销', exact: true }).tap();
+    await expect(parameter).toHaveValue(original);
+    expect(await readDraft(page, nestedLevel.id)).toEqual(nestedLevel.solution);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+    await page
+      .locator('.program-block.block-repeat:has(.program-block.block-repeat)')
+      .first()
+      .screenshot({
+        path: 'test-results/python-nested-loop-mobile.png',
+      });
   });
 });
