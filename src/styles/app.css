@@ -1452,6 +1452,117 @@ h1 {
   transition: none !important;
   scroll-behavior: auto !important;
 }
+.python-toolbox .library-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.python-toolbox .library-block {
+  min-width: 0;
+  text-align: left;
+}
+.python-library-label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.python-library-label code,
+.python-program code {
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 13px;
+}
+.python-library-label code {
+  overflow-wrap: anywhere;
+}
+.python-library-label small {
+  font-size: 11px;
+  font-weight: 400;
+}
+.python-tip {
+  margin-top: 14px;
+  color: #687b96;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.python-tip code {
+  color: #466d9f;
+}
+.python-program .program-list {
+  flex-direction: column;
+  align-items: stretch;
+}
+.python-program .block-wrap {
+  width: 100%;
+  flex: none;
+}
+.python-program .block-wrap.insert-before:before {
+  top: -8px;
+  bottom: auto;
+  left: 0;
+  right: 0;
+  width: auto;
+  height: 4px;
+}
+.python-program .block-top {
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 3px 7px;
+}
+.python-program .block-handle {
+  min-width: 0;
+  max-width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+.python-program .block-handle code {
+  overflow-wrap: anywhere;
+}
+.python-program .block-handle > svg {
+  flex-shrink: 0;
+}
+.python-program .number-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+}
+.python-parameter {
+  font-size: 11px;
+}
+.python-program .selection-toolbar > span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.python-preview {
+  margin: 6px 0 18px;
+  border: 1px solid #dce6f2;
+  border-radius: 12px;
+  background: #f4f8fe;
+  padding: 14px;
+  min-width: 0;
+}
+.python-preview h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #476a9a;
+  font-size: 13px;
+}
+.python-preview pre {
+  margin: 12px 0;
+  padding: 13px;
+  max-height: 280px;
+  overflow: auto;
+  border-radius: 8px;
+  background: #fff;
+  color: #345b87;
+  line-height: 1.8;
+  tab-size: 4;
+}
+.python-preview p {
+  color: #687b96;
+  font-size: 11px;
+  line-height: 1.8;
+}
 @keyframes pulse {
   50% {
     opacity: 0.4;

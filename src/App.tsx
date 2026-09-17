@@ -49,6 +49,8 @@ import { RobotGlyph } from './components/Robot';
 import { Modal } from './components/Modal';
 import { playTone, unlockSound } from './components/sound';
 
+const chapters = [...new Set(levels.map((level) => level.chapter))];
+
 function restore() {
   try {
     return readLocal(window.localStorage);
@@ -78,6 +80,7 @@ export default function App() {
   const program = history.present;
   const locked = run.status === 'running' || run.status === 'paused';
   const completeCount = levels.filter((l) => saved.completed[l.id]).length;
+  const nextLevel = levels[levels.findIndex((entry) => entry.id === level.id) + 1];
   const [systemReduce, setSystemReduce] = useState(
     () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
@@ -224,7 +227,7 @@ export default function App() {
           <div className="header-actions">
             <span className="progress-stat">
               <Trophy size={17} /> <b>{completeCount}</b>
-              <span>/ 12</span>
+              <span>/ {levels.length}</span>
             </span>
             <span className="header-divider" />
             <button
@@ -306,7 +309,9 @@ export default function App() {
             <Puzzle size={18} /> 我的编程板 <span>{countBlocks(program)}</span>
           </button>
         </div>
-        <div className={`studio mobile-${mobileTab}`}>
+        <div
+          className={`studio mobile-${mobileTab} ${level.syntax === 'python' ? 'python-studio' : ''}`}
+        >
           <section className="map-column panel">
             <div className="panel-heading">
               <h2>
@@ -473,9 +478,9 @@ export default function App() {
               {run.status === 'success' && !level.freePlay && (
                 <button
                   className="next-level-button"
-                  onClick={() => switchLevel(level.number < 12 ? levels[level.number].id : 'free')}
+                  onClick={() => switchLevel(nextLevel?.id ?? freeLevel.id)}
                 >
-                  {level.number < 12 ? '去下一关探险' : '进入自由实验室'}
+                  {nextLevel ? '去下一关探险' : '进入自由实验室'}
                   <ArrowRight size={18} />
                 </button>
               )}
@@ -517,9 +522,11 @@ export default function App() {
         <Modal title="下一站，去哪里探险？" onClose={() => setModal(null)} wide>
           <div className="level-modal-intro">
             <Sparkles size={18} />
-            <span>按自己的节奏探索，已完成 {completeCount} / 12 关</span>
+            <span>
+              按自己的节奏探索，已完成 {completeCount} / {levels.length} 关
+            </span>
           </div>
-          {['初次见面', '转弯的秘密', '重复的魔法', '我的动作组合'].map((chapter, i) => (
+          {chapters.map((chapter, i) => (
             <div className="chapter" key={chapter}>
               <h3>
                 <span>0{i + 1}</span>

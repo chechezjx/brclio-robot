@@ -21,6 +21,7 @@ export interface Level {
   story: string;
   concept: string;
   chapter: string;
+  syntax?: 'python';
   width: number;
   height: number;
   start: Robot;

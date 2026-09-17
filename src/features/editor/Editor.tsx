@@ -17,6 +17,7 @@ import {
   LockKeyhole,
   Puzzle,
   ChevronRight,
+  Code2,
 } from 'lucide-react';
 import type {
   Block,
@@ -27,6 +28,7 @@ import type {
   Program,
 } from '../../types';
 import { countBlocks } from '../../engine/validation';
+import { programToPython, pythonStatement } from './python';
 import {
   changeNumber,
   cloneBlock,
@@ -62,12 +64,25 @@ function LibraryBlock({
   name,
   disabled,
   onAdd,
+  python,
 }: {
   type: Block['type'];
   name?: 'A' | 'B';
   disabled: boolean;
   onAdd: () => void;
+  python: boolean;
 }) {
+  const label = python
+    ? pythonStatement(
+        type === 'forward' || type === 'backward'
+          ? { id: 'preview', type, steps: 1 }
+          : type === 'repeat'
+            ? { id: 'preview', type, times: 2, body: [] }
+            : type === 'call'
+              ? { id: 'preview', type, function: name ?? 'A' }
+              : { id: 'preview', type },
+      )
+    : `${blockLabels[type]}${name ?? ''}`;
   const { ref, isDragging } = useDraggable({
     id: `library-${type}-${name ?? ''}`,
     disabled,
@@ -79,22 +94,34 @@ function LibraryBlock({
       className={`library-block block-${type} ${isDragging ? 'dragging' : ''}`}
       disabled={disabled}
       onClick={onAdd}
-      aria-label={`添加${blockLabels[type]}${name ?? ''}`}
+      aria-label={`添加${label}`}
     >
       <span className="library-icon">
         <BlockIcon type={type} name={name} />
       </span>
-      <span>
-        {blockLabels[type]}
-        {name && ` ${name}`}
-      </span>
-      {(type === 'forward' || type === 'backward' || type === 'repeat') && (
+      {python ? (
+        <span className="python-library-label">
+          <code>{label}</code>
+          <small>
+            {type === 'repeat'
+              ? '重复执行缩进的指令'
+              : `${blockLabels[type]}${name ?? ''}${type === 'forward' || type === 'backward' ? ' · 括号里是步数' : ''}`}
+          </small>
+        </span>
+      ) : (
+        <span>
+          {blockLabels[type]}
+          {name && ` ${name}`}
+        </span>
+      )}
+      {!python && (type === 'forward' || type === 'backward' || type === 'repeat') && (
         <span className="library-number">{type === 'repeat' ? 2 : 1}</span>
       )}
     </button>
   );
 }
 interface ListProps {
+  python: boolean;
   nodes: Block[];
   container: ContainerId;
   depth: number;
@@ -150,6 +177,9 @@ function InsertEnd({
   );
 }
 function BoardBlock({ node, index, ...props }: ListProps & { node: Block; index: number }) {
+  const label = props.python
+    ? pythonStatement(node)
+    : `${blockLabels[node.type]}${node.type === 'call' ? node.function : ''}`;
   const { ref, handleRef, isDragging } = useDraggable({
     id: node.id,
     disabled: props.locked,
@@ -185,7 +215,7 @@ function BoardBlock({ node, index, ...props }: ListProps & { node: Block; index:
             className="block-handle"
             disabled={props.locked}
             onClick={() => props.onSelect(node.id)}
-            aria-label={`选择第${number}块${blockLabels[node.type]}${node.type === 'call' ? node.function : ''}`}
+            aria-label={`选择第${number}块${label}`}
             aria-pressed={props.selected === node.id}
             onKeyDown={(e) => {
               if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -199,14 +229,21 @@ function BoardBlock({ node, index, ...props }: ListProps & { node: Block; index:
             }}
           >
             <BlockIcon type={node.type} name={node.type === 'call' ? node.function : undefined} />
-            <span>
-              {blockLabels[node.type]}
-              {node.type === 'call' && ` ${node.function}`}
-            </span>
+            {props.python ? (
+              <code>{label}</code>
+            ) : (
+              <span>
+                {blockLabels[node.type]}
+                {node.type === 'call' && ` ${node.function}`}
+              </span>
+            )}
             <GripVertical className="grip" size={15} />
           </button>
           {('steps' in node || node.type === 'repeat') && (
             <label className="number-badge">
+              {props.python && (
+                <span className="python-parameter">{node.type === 'repeat' ? '次数' : '步数'}</span>
+              )}
               <span className="sr-only">
                 第{number}块{node.type === 'repeat' ? '重复次数' : '步数'}
               </span>
@@ -230,7 +267,11 @@ function BoardBlock({ node, index, ...props }: ListProps & { node: Block; index:
           <>
             <div className="loop-description">
               <Repeat2 size={14} />
-              {loop ? `第 ${loop.iteration} / ${loop.total} 轮` : `里面的指令做 ${node.times} 遍`}
+              {loop
+                ? `第 ${loop.iteration} / ${loop.total} 轮`
+                : props.python
+                  ? `缩进的指令重复 ${node.times} 次`
+                  : `里面的指令做 ${node.times} 遍`}
               <button disabled={props.locked} onClick={() => props.onTarget(node.id)}>
                 添加到里面 <ChevronRight size={14} />
               </button>
@@ -298,6 +339,7 @@ export function Editor({
   const [selected, setSelected] = useState<string | null>(null);
   const [targetContainer, setTarget] = useState<ContainerId>('main');
   const program = history.present;
+  const python = level.syntax === 'python';
   const selectedNode = selected ? findBlock(program, selected) : undefined;
   const execute = (fn: () => Program) => {
     if (locked) return;
@@ -345,7 +387,10 @@ export function Editor({
   const walk = (nodes: Block[], prefix: string) =>
     nodes.forEach((b, i) => {
       if (b.type === 'repeat') {
-        destinations.push({ id: b.id, label: `${prefix} · 重复 ${i + 1}` });
+        destinations.push({
+          id: b.id,
+          label: `${prefix} · ${python ? 'for 循环' : '重复'} ${i + 1}`,
+        });
         walk(b.body, `${prefix}.${i + 1}`);
       }
     });
@@ -356,6 +401,7 @@ export function Editor({
     selectedNode?.container ?? (getContainer(program, targetContainer) ? targetContainer : 'main');
   const targetLabel = destinations.find((d) => d.id === effectiveContainer)?.label ?? '主程序';
   const listProps = {
+    python,
     selected: selectedNode ? selected : null,
     targetContainer: effectiveContainer,
     focus,
@@ -386,10 +432,11 @@ export function Editor({
         );
       }}
     >
-      <section className="toolbox">
+      <section className={`toolbox ${python ? 'python-toolbox' : ''}`}>
         <div className="section-heading">
           <h2>
-            <Puzzle size={19} /> 指令积木
+            {python ? <Code2 size={19} /> : <Puzzle size={19} />}{' '}
+            {python ? 'Python 指令积木' : '指令积木'}
           </h2>
           <span>点一点，或拖到编程板</span>
         </div>
@@ -401,15 +448,28 @@ export function Editor({
                   key={name}
                   type="call"
                   name={name}
+                  python={python}
                   disabled={locked}
                   onAdd={() => add('call', name)}
                 />
               ))
             ) : (
-              <LibraryBlock key={type} type={type} disabled={locked} onAdd={() => add(type)} />
+              <LibraryBlock
+                key={type}
+                type={type}
+                python={python}
+                disabled={locked}
+                onAdd={() => add(type)}
+              />
             ),
           )}
         </div>
+        {python && (
+          <p className="python-tip">
+            <code>robot</code> 是本关的机器人对象；括号里填写参数。把积木放进 <code>for</code>{' '}
+            循环，就能重复执行。
+          </p>
+        )}
         {!level.allowed.includes('repeat') && (
           <div className="unlock-note">
             <LockKeyhole size={13} /> 转弯、重复和动作组合，将在后面的关卡陆续出现
@@ -417,7 +477,7 @@ export function Editor({
         )}
       </section>
       <section
-        className="program-section"
+        className={`program-section ${python ? 'python-program' : ''}`}
         onKeyDown={(event) => {
           if (
             locked ||
@@ -477,7 +537,8 @@ export function Editor({
         </div>
         <div className="board-paper">
           <div className="program-start">
-            <span className="start-dot" /> 开始 <span>从左到右，按编号执行</span>
+            <span className="start-dot" /> 开始{' '}
+            <span>{python ? '从上到下，按缩进执行' : '从左到右，按编号执行'}</span>
             {locked && (
               <b>
                 <LockKeyhole size={13} /> 重置后可编辑
@@ -492,7 +553,7 @@ export function Editor({
         <div className="selection-toolbar">
           <span>
             {selectedNode
-              ? `已选「${blockLabels[selectedNode.block.type]}」`
+              ? `已选「${python ? pythonStatement(selectedNode.block) : blockLabels[selectedNode.block.type]}」`
               : `将添加到：${targetLabel}`}
           </span>
           <div className="selection-actions">
@@ -591,6 +652,22 @@ export function Editor({
               </div>
             ))}
           </div>
+        )}
+        {python && (
+          <section className="python-preview" aria-labelledby="python-preview-title">
+            <div className="section-heading">
+              <h3 id="python-preview-title">
+                <Code2 size={17} /> Python 代码预览
+              </h3>
+              <span>随积木自动更新</span>
+            </div>
+            <pre data-testid="python-preview" tabIndex={0} aria-label="积木对应的 Python 代码">
+              <code>{programToPython(program) || '# 添加积木，开始你的 Python 探险'}</code>
+            </pre>
+            <p>
+              循环内的代码缩进 4 个空格。空循环中的 <code>pass</code> 是占位，运行前记得放入指令。
+            </p>
+          </section>
         )}
       </section>
     </DragDropProvider>

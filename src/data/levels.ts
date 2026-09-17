@@ -331,7 +331,7 @@ export const levels: Level[] = [
     number: 12,
     title: '星际路线设计师',
     chapter: '我的动作组合',
-    story: '最后一场星际探险！把循环和动作组合搭配起来，设计自己的星光路线。',
+    story: '来一场星际探险！把循环和动作组合搭配起来，设计自己的星光路线。',
     concept: '循环与函数协作',
     width: 8,
     height: 8,
@@ -357,6 +357,38 @@ export const levels: Level[] = [
     ],
     A: [f(2), r(), f(2), l()],
     main: [repeat(3, [call()])],
+  }),
+  level({
+    number: 13,
+    title: 'Python 初探',
+    chapter: 'Python 启蒙',
+    syntax: 'python',
+    story:
+      '给熟悉的积木换上 Python 写法！沿着花园的三条边收集星星，看看括号里的数字和缩进如何指挥 Brclio。',
+    concept: 'Python 函数调用与 for 循环',
+    width: 6,
+    height: 6,
+    start: { x: 1, y: 4, direction: 'E' },
+    goal: { x: 1, y: 1 },
+    obstacles: [
+      { x: 2, y: 2 },
+      { x: 3, y: 2 },
+      { x: 2, y: 3 },
+      { x: 3, y: 3 },
+    ],
+    stars: [
+      { x: 3, y: 4 },
+      { x: 4, y: 2 },
+      { x: 2, y: 1 },
+    ],
+    allowed: loopCommands,
+    maxBlocks: 3,
+    hints: [
+      'robot.forward(3) 表示前进 3 格；robot.turn_left() 表示原地左转。括号里的数字是参数。',
+      '路线有三条一样长的边，每走 3 格就左转。for _ in range(3): 会把里面的指令重复 3 次。',
+      '放入 for _ in range(3):，再把 robot.forward(3) 和 robot.turn_left() 依次放到里面。缩进表示这两条指令属于循环。',
+    ],
+    main: [repeat(3, [f(3), l()])],
   }),
 ];
 

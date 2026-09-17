@@ -834,3 +834,45 @@
     scroll-margin-bottom: 190px;
   }
 }
+@media (max-width: 1150px) {
+  .python-toolbox .library-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (min-width: 601px) and (max-width: 900px) {
+  .level-track {
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .python-toolbox .library-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 901px) and (min-height: 800px) {
+  .python-studio > .map-column {
+    position: sticky;
+    top: 16px;
+  }
+}
+@media (max-width: 600px) {
+  .python-program .board-paper {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .python-program .loop-wrap .program-list {
+    margin-left: 6px;
+    margin-right: 6px;
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+  .python-program .block-handle code {
+    font-size: 12px;
+  }
+  .python-preview {
+    padding: 11px;
+  }
+  .python-preview .section-heading {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
