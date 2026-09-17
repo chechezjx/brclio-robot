@@ -28,7 +28,7 @@ import type {
   Program,
 } from '../../types';
 import { countBlocks } from '../../engine/validation';
-import { programToPython, pythonStatement } from './python';
+import { programToPython, pythonFunctionName, pythonStatement } from './python';
 import {
   changeNumber,
   cloneBlock,
@@ -143,6 +143,7 @@ function InsertEnd({
   locked,
   onTarget,
   empty,
+  python,
 }: {
   container: ContainerId;
   index: number;
@@ -150,7 +151,18 @@ function InsertEnd({
   locked: boolean;
   onTarget: () => void;
   empty: boolean;
+  python: boolean;
 }) {
+  const containerLabel =
+    container === 'main'
+      ? '主程序'
+      : container === 'A' || container === 'B'
+        ? python
+          ? `函数 ${pythonFunctionName(container)}()`
+          : `动作组合 ${container}`
+        : python
+          ? 'for 循环'
+          : '重复积木';
   const { ref, isDropTarget } = useDroppable({
     id: `end-${container}`,
     disabled: locked,
@@ -164,7 +176,7 @@ function InsertEnd({
       onClick={onTarget}
       className={`insert-end ${empty ? 'empty-target' : ''} ${isDropTarget ? 'drop-active' : ''}`}
       data-testid={`drop-${container}`}
-      aria-label={`在${container === 'main' ? '主程序' : container === 'A' || container === 'B' ? `动作组合 ${container}` : '重复积木'}末尾插入`}
+      aria-label={`在${containerLabel}末尾插入`}
     >
       <Plus size={empty ? 30 : 22} />
       {empty && (
@@ -305,6 +317,7 @@ function ProgramList(props: ListProps) {
         <BoardBlock {...props} key={node.id} node={node} index={index} />
       ))}
       <InsertEnd
+        python={props.python}
         container={props.container}
         index={props.nodes.length}
         depth={props.depth}
@@ -383,7 +396,11 @@ export function Editor({
     });
   const destinations: { id: string; label: string }[] = [{ id: 'main', label: '主程序' }];
   if (level.allowed.includes('call'))
-    destinations.push({ id: 'A', label: '动作组合 A' }, { id: 'B', label: '动作组合 B' });
+    for (const name of ['A', 'B'] as const)
+      destinations.push({
+        id: name,
+        label: python ? `函数 ${pythonFunctionName(name)}()` : `动作组合 ${name}`,
+      });
   const walk = (nodes: Block[], prefix: string) =>
     nodes.forEach((b, i) => {
       if (b.type === 'repeat') {
@@ -468,6 +485,13 @@ export function Editor({
           <p className="python-tip">
             <code>robot</code> 是本关的机器人对象；括号里填写参数。把积木放进 <code>for</code>{' '}
             循环，就能重复执行。
+            {level.allowed.includes('call') && (
+              <>
+                {' '}
+                在下方用 <code>def</code> 定义函数，再用 <code>action_a()</code> 或{' '}
+                <code>action_b()</code> 调用它。
+              </>
+            )}
           </p>
         )}
         {!level.allowed.includes('repeat') && (
@@ -639,9 +663,10 @@ export function Editor({
               >
                 <div className="function-heading">
                   <h3>
-                    <span className="function-symbol">{name}</span> 动作组合 {name}
+                    <span className="function-symbol">{name}</span>{' '}
+                    {python ? <code>def {pythonFunctionName(name)}():</code> : `动作组合 ${name}`}
                   </h3>
-                  <span>被调用时才执行</span>
+                  <span>{python ? '函数体 · 调用时才执行' : '被调用时才执行'}</span>
                 </div>
                 <ProgramList
                   {...listProps}
@@ -665,7 +690,9 @@ export function Editor({
               <code>{programToPython(program) || '# 添加积木，开始你的 Python 探险'}</code>
             </pre>
             <p>
-              循环内的代码缩进 4 个空格。空循环中的 <code>pass</code> 是占位，运行前记得放入指令。
+              每进入一层循环{level.allowed.includes('call') ? '或函数' : ''}，代码就多缩进 4
+              个空格。
+              <code>pass</code> 是空白处的占位，运行前记得放入指令。
             </p>
           </section>
         )}

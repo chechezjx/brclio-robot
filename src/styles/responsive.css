@@ -733,6 +733,10 @@
   .level-track button {
     min-width: 48px;
   }
+  .level-track button.current {
+    flex-shrink: 0;
+    min-width: max-content;
+  }
 }
 .program-list.target-container {
   outline: 1.5px dashed #99bbee;

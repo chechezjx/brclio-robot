@@ -1,6 +1,6 @@
 import type { Block, FunctionName, Program } from '../../types';
 
-const functionIdentifier = (name: FunctionName) => `action_${name.toLowerCase()}`;
+export const pythonFunctionName = (name: FunctionName) => `action_${name.toLowerCase()}`;
 
 export function pythonStatement(block: Block): string {
   switch (block.type) {
@@ -13,7 +13,7 @@ export function pythonStatement(block: Block): string {
     case 'repeat':
       return `for _ in range(${block.times}):`;
     case 'call':
-      return `${functionIdentifier(block.function)}()`;
+      return `${pythonFunctionName(block.function)}()`;
   }
 }
 
@@ -46,7 +46,7 @@ export function programToPython(program: Program): string {
   for (const name of ['A', 'B'] as const) {
     const body = program.functions[name];
     if (body.length > 0 || called.has(name)) {
-      sections.push(`def ${functionIdentifier(name)}():\n${render(body, 1)}`);
+      sections.push(`def ${pythonFunctionName(name)}():\n${render(body, 1)}`);
     }
   }
   if (program.main.length > 0) sections.push(render(program.main, 0));

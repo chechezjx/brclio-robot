@@ -73,6 +73,7 @@ export default function App() {
   const [mobileTab, setMobileTab] = useState<'map' | 'code'>('map');
   const player = useRef<Player | null>(null);
   const upload = useRef<HTMLInputElement>(null);
+  const levelTrack = useRef<HTMLDivElement>(null);
   const latestLevel = useRef(level.id);
   latestLevel.current = level.id;
   const lifecycleVersion = useRef(0);
@@ -84,6 +85,20 @@ export default function App() {
   const [systemReduce, setSystemReduce] = useState(
     () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
+  useEffect(() => {
+    const track = levelTrack.current;
+    const active = track?.querySelector<HTMLButtonElement>('[aria-current="step"]');
+    if (!track || !active) return;
+    const activeBounds = active.getBoundingClientRect();
+    track.scrollTo({
+      left:
+        track.scrollLeft +
+        activeBounds.left -
+        track.getBoundingClientRect().left -
+        (track.clientWidth - activeBounds.width) / 2,
+      behavior: 'auto',
+    });
+  }, [level.id]);
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
     const listener = () => setSystemReduce(query.matches);
@@ -276,7 +291,7 @@ export default function App() {
           </button>
         </div>
         {!level.freePlay && (
-          <div className="level-track" aria-label="关卡进度">
+          <div ref={levelTrack} className="level-track" aria-label="关卡进度">
             {levels.map((l) => (
               <button
                 key={l.id}
